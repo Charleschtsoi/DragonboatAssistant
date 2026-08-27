@@ -148,7 +148,7 @@ pkill -f "node index.js"
 
 The bot only sends while the Mac is awake and `npm start` is running.
 
-**Option A — stay awake while the bot runs:**
+**Stay awake while the bot runs** (simple):
 
 ```bash
 caffeinate -i npm start
@@ -156,17 +156,41 @@ caffeinate -i npm start
 
 Or in **System Settings → Battery / Energy**, prevent automatic sleeping on power adapter.
 
-**Option B — let the Mac sleep, wake just before the poll:**
+---
 
-1. Keep `npm start` running (process resumes after wake).
-2. Schedule a wake a few minutes before `POLL_CRON` (e.g. Monday 08:55 if the poll is 09:00).
-3. In Terminal (example — adjust to match your poll time):
+## Mac sleep / wake schedule (Monday)
+
+Use this if you want the Mac to sleep most of the week, then wake just before the Monday poll (`POLL_CRON` default: **09:00 HKT**).
+
+### Prerequisites
+
+1. Leave the bot running (`npm start` or `nohup` / `caffeinate`). The process freezes in sleep and resumes on wake.
+2. Wake a few minutes **before** the poll. If the Mac sleeps through 09:00, the poll is usually **not** sent later.
+
+### Exact `pmset` steps (Monday 08:55)
+
+1. Open **Terminal**.
+2. Schedule a repeating Monday wake (admin password required):
    ```bash
    sudo pmset repeat wakeorpoweron M 08:55:00
    ```
-   Or use **System Settings → Battery/Energy → Schedule**.
+   - `M` = Monday only  
+   - `08:55:00` = 5 minutes before the default 09:00 poll  
+   - If you change `POLL_CRON`, change this wake time to match (still a few minutes earlier)
+3. Confirm the schedule:
+   ```bash
+   pmset -g sched
+   ```
+   You should see something like: `wakeorpoweron at 8:55AM every Monday`
+4. Keep the Mac **plugged in** if you can — scheduled wake is more reliable on AC power.
+5. Optional: cancel the schedule later with:
+   ```bash
+   sudo pmset repeat cancel
+   ```
 
-If the Mac sleeps through 09:00, the poll is usually **not** sent later when it wakes.
+> Times follow the Mac’s **system clock**. If the Mac is not set to Hong Kong time, convert 08:55 HKT to your local clock, or set the Mac timezone to Hong Kong so it matches `TIMEZONE` / `POLL_CRON`.
+
+You can also set this in **System Settings → Battery / Energy → Schedule** (same idea: Monday, ~08:55).
 
 ---
 
@@ -187,7 +211,7 @@ If the Mac sleeps through 09:00, the poll is usually **not** sent later when it 
 | QR never appears / Chromium fails | Re-run `npm install`; ensure antivirus isn’t blocking Chromium under `node_modules/puppeteer` |
 | Bot asks for QR every restart | Don’t delete `.wwebjs_auth/`; don’t unlink the device in WhatsApp |
 | Wrong / missing group ID | Confirm the logged chat ends with `@g.us`, not `@c.us` (personal chats) |
-| Poll didn’t fire | Mac was asleep through Monday 09:00; wake earlier or use `caffeinate` |
+| Poll didn’t fire | Mac was asleep through Monday 09:00; see **Mac sleep / wake schedule** or use `caffeinate` |
 | Admin alert didn’t arrive | Check `ADMIN_PHONE_NUMBER` format (`852...@c.us`) and that you’ve chatted with that account before |
 
 ---
