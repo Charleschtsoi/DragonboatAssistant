@@ -9,9 +9,8 @@ const TARGET_GROUP_ID = 'YOUR_GROUP_ID@g.us'; // e.g. '1203630...@g.us'
 const ADMIN_PHONE_NUMBER = 'YOUR_NUMBER@c.us'; // e.g. '85291234567@c.us'
 const TIMEZONE = 'Asia/Hong_Kong'; // IANA timezone (Hong Kong)
 
-// Placeholder day for the invoice reminder — change '3' (Wednesday) as needed.
-// Cron day-of-week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-const INVOICE_REMINDER_DAY = '3';
+// Monday attendance poll time (Asia/Hong_Kong). Align Mac wake with this window.
+const POLL_CRON = '0 9 * * 1'; // 09:00 every Monday
 
 const client = new Client({
   authStrategy: new LocalAuth(),
@@ -46,9 +45,9 @@ async function alertAdmin(err) {
 }
 
 function scheduleJobs() {
-  // Task 1 — Monday Poll at 09:00 (Asia/Hong_Kong)
+  // Monday attendance poll (Asia/Hong_Kong)
   cron.schedule(
-    '0 9 * * 1',
+    POLL_CRON,
     async () => {
       try {
         const poll = new Poll(
@@ -65,24 +64,7 @@ function scheduleJobs() {
     { timezone: TIMEZONE }
   );
 
-  // Task 2 — Invoice Reminder at 10:00 (placeholder day; change INVOICE_REMINDER_DAY)
-  cron.schedule(
-    `0 10 * * ${INVOICE_REMINDER_DAY}`,
-    async () => {
-      try {
-        await client.sendMessage(
-          TARGET_GROUP_ID,
-          'Reminder: Please issue the training invoice for corporate claims. Thank you!'
-        );
-        console.log('Invoice reminder sent.');
-      } catch (err) {
-        await alertAdmin(err);
-      }
-    },
-    { timezone: TIMEZONE }
-  );
-
-  console.log(`Cron jobs scheduled (timezone: ${TIMEZONE}).`);
+  console.log(`Attendance poll scheduled (${POLL_CRON}, timezone: ${TIMEZONE}).`);
 }
 
 client.initialize();

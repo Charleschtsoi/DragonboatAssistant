@@ -1,7 +1,7 @@
 {
   "name": "dragonboat-assistant",
   "version": "1.0.0",
-  "description": "WhatsApp group logistics bot for dragonboat training attendance and invoice reminders",
+  "description": "WhatsApp bot that sends a weekly dragonboat training attendance poll",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
