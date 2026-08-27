@@ -1,13 +1,14 @@
 # DragonboatAssistant
 
-Local WhatsApp bot for macOS that automates dragonboat group logistics:
+Local WhatsApp bot for macOS that sends a weekly dragonboat attendance poll.
 
 | Schedule | Action |
 | --- | --- |
-| **Monday 09:00** (Hong Kong) | Sends an attendance poll: *Dragonboat Training Attendance* → Join / Not Join |
-| **Wednesday 10:00** (Hong Kong) | Sends a reminder to issue the training invoice for corporate claims |
+| **Monday 09:00** (Hong Kong) | Sends a poll: *Dragonboat Training Attendance* → Join / Not Join |
 
-If a scheduled send fails, the bot DMs you (admin) so you can check the MacBook console.
+If the send fails, the bot DMs you (admin) so you can check the MacBook console.
+
+> The Mac must be **awake** around Monday 09:00 HKT (or use a scheduled wake a few minutes earlier). Sleep will skip the poll.
 
 ---
 
@@ -27,7 +28,7 @@ If a scheduled send fails, the bot DMs you (admin) so you can check the MacBook 
 
 3. **WhatsApp on your phone** — needed once to scan the QR code and link the session.
 
-> `whatsapp-web.js` launches Chromium via Puppeteer. On first install it downloads Chromium automatically. Keep the Mac awake (or prevent sleep) while the bot is running so cron jobs fire on time.
+> `whatsapp-web.js` launches Chromium via Puppeteer. On first install it downloads Chromium automatically.
 
 ---
 
@@ -51,12 +52,14 @@ npm install
 
 ## 2. Configure `index.js`
 
-Open `index.js` and set the three values at the top:
+Open `index.js` and set the values at the top:
 
 ```js
 const TARGET_GROUP_ID = 'YOUR_GROUP_ID@g.us';     // WhatsApp group chat ID
 const ADMIN_PHONE_NUMBER = 'YOUR_NUMBER@c.us';   // your number for error alerts
 const TIMEZONE = 'Asia/Hong_Kong';
+
+const POLL_CRON = '0 9 * * 1'; // Monday 09:00 — change if you prefer another time
 ```
 
 ### Admin phone number format
@@ -67,14 +70,17 @@ Use country code **without** `+` or spaces, then `@c.us`:
 | --- | --- |
 | +852 9123 4567 | `'85291234567@c.us'` |
 
-### Change the invoice reminder day (optional)
+### Change poll time (optional)
 
-Default is Wednesday (`3`). Edit this constant near the top of `index.js`:
+`POLL_CRON` uses standard cron (`minute hour day-of-month month day-of-week`). Examples:
 
-```js
-const INVOICE_REMINDER_DAY = '3';
-// 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-```
+| Goal | `POLL_CRON` |
+| --- | --- |
+| Monday 09:00 (default) | `'0 9 * * 1'` |
+| Monday 08:30 | `'30 8 * * 1'` |
+| Sunday 20:00 | `'0 20 * * 0'` |
+
+If you use Mac **scheduled wake**, set wake a few minutes **before** this time (e.g. wake 08:55 for a 09:00 poll).
 
 ---
 
@@ -115,7 +121,7 @@ cd ~/Projects/DragonboatAssistant
 npm start
 ```
 
-Leave Terminal open (or run in the background — see below). Cron jobs use `Asia/Hong_Kong`, so they fire at local Hong Kong time even if the Mac’s system timezone differs.
+Leave Terminal open (or run in the background — see below). The poll uses `Asia/Hong_Kong`, so it fires at Hong Kong time even if the Mac’s system timezone differs.
 
 ### Keep it running in the background (optional)
 
@@ -138,13 +144,29 @@ Stop later:
 pkill -f "node index.js"
 ```
 
-> For long-term reliability, prevent Mac sleep while the bot should run: **System Settings → Battery / Energy → Prevent automatic sleeping when display is off** (on AC power), or use a tool like `caffeinate`.
+### Mac sleep vs Monday poll
 
-Example (keep awake while the process runs):
+The bot only sends while the Mac is awake and `npm start` is running.
+
+**Option A — stay awake while the bot runs:**
 
 ```bash
 caffeinate -i npm start
 ```
+
+Or in **System Settings → Battery / Energy**, prevent automatic sleeping on power adapter.
+
+**Option B — let the Mac sleep, wake just before the poll:**
+
+1. Keep `npm start` running (process resumes after wake).
+2. Schedule a wake a few minutes before `POLL_CRON` (e.g. Monday 08:55 if the poll is 09:00).
+3. In Terminal (example — adjust to match your poll time):
+   ```bash
+   sudo pmset repeat wakeorpoweron M 08:55:00
+   ```
+   Or use **System Settings → Battery/Energy → Schedule**.
+
+If the Mac sleeps through 09:00, the poll is usually **not** sent later when it wakes.
 
 ---
 
@@ -153,7 +175,6 @@ caffeinate -i npm start
 | Event | Terminal | WhatsApp |
 | --- | --- | --- |
 | Monday poll sent | `Monday attendance poll sent.` | Poll in the group |
-| Invoice reminder sent | `Invoice reminder sent.` | Text in the group |
 | Send failed | Error stack in console | DM to admin: *Error: Failed to execute scheduled group task. Check MacBook console.* |
 
 ---
@@ -166,7 +187,7 @@ caffeinate -i npm start
 | QR never appears / Chromium fails | Re-run `npm install`; ensure antivirus isn’t blocking Chromium under `node_modules/puppeteer` |
 | Bot asks for QR every restart | Don’t delete `.wwebjs_auth/`; don’t unlink the device in WhatsApp |
 | Wrong / missing group ID | Confirm the logged chat ends with `@g.us`, not `@c.us` (personal chats) |
-| Cron didn’t fire | Mac was asleep; keep the Mac awake or plugged in with sleep disabled for that period |
+| Poll didn’t fire | Mac was asleep through Monday 09:00; wake earlier or use `caffeinate` |
 | Admin alert didn’t arrive | Check `ADMIN_PHONE_NUMBER` format (`852...@c.us`) and that you’ve chatted with that account before |
 
 ---
@@ -175,7 +196,7 @@ caffeinate -i npm start
 
 ```text
 DragonboatAssistant/
-├── index.js          # Bot + cron jobs + config
+├── index.js          # Bot + Monday poll + config
 ├── package.json
 ├── .wwebjs_auth/     # Saved WhatsApp session (created after first login; do not commit)
 └── README.md
