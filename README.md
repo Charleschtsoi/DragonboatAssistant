@@ -211,7 +211,7 @@ You can also set this in **System Settings → Battery / Energy → Schedule** (
 | QR never appears / Chromium fails | Re-run `npm install`; ensure antivirus isn’t blocking Chromium under `node_modules/puppeteer` |
 | Bot asks for QR every restart | Don’t delete `.wwebjs_auth/`; don’t unlink the device in WhatsApp |
 | Wrong / missing group ID | Confirm the logged chat ends with `@g.us`, not `@c.us` (personal chats) |
-| Poll didn’t fire | Mac was asleep through Monday 09:00; wake earlier or use `caffeinate` |
+| Poll didn’t fire | Mac was asleep through Monday 09:00; see **Mac sleep / wake schedule** or use `caffeinate` |
 | Admin alert didn’t arrive | Check `ADMIN_PHONE_NUMBER` format (`852...@c.us`) and that you’ve chatted with that account before |
 
 ---
