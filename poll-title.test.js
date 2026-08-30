@@ -4,7 +4,7 @@ const {
   upcomingSaturdayDate,
   formatTrainingPollTitle,
   buildAttendancePollTitle,
-} = require('./index.js');
+} = require('./poll-title.js');
 
 function atHkt(isoLocal) {
   return new Date(`${isoLocal}+08:00`);
