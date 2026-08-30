@@ -4,7 +4,7 @@ Local WhatsApp bot for macOS that sends a weekly dragonboat attendance poll.
 
 | Schedule | Action |
 | --- | --- |
-| **Monday 09:00** (Hong Kong) | Sends a poll: *Dragonboat Training Attendance* → Join / Not Join |
+| **Monday 09:00** (Hong Kong) | Sends a poll for **this coming Saturday**: *5 Sep Training 14:00 - 16:00 @ Ap Lei Chau* → Join / Not join |
 
 If the send fails, the bot DMs you (admin) so you can check the MacBook console.
 
@@ -60,7 +60,11 @@ const ADMIN_PHONE_NUMBER = 'YOUR_NUMBER@c.us';   // your number for error alerts
 const TIMEZONE = 'Asia/Hong_Kong';
 
 const POLL_CRON = '0 9 * * 1'; // Monday 09:00 — change if you prefer another time
+const TRAINING_TIME = '14:00 - 16:00';
+const TRAINING_VENUE = 'Ap Lei Chau';
 ```
+
+The poll title is built automatically from the **upcoming Saturday** in Hong Kong time, for example `22 Aug Training 14:00 - 16:00 @ Ap Lei Chau`. Change `TRAINING_TIME` or `TRAINING_VENUE` if the session details change.
 
 ### Admin phone number format
 
@@ -198,7 +202,7 @@ You can also set this in **System Settings → Battery / Energy → Schedule** (
 
 | Event | Terminal | WhatsApp |
 | --- | --- | --- |
-| Monday poll sent | `Monday attendance poll sent.` | Poll in the group |
+| Monday poll sent | `Monday attendance poll sent: 5 Sep Training 14:00 - 16:00 @ Ap Lei Chau` | Poll in the group |
 | Send failed | Error stack in console | DM to admin: *Error: Failed to execute scheduled group task. Check MacBook console.* |
 
 ---
@@ -221,6 +225,7 @@ You can also set this in **System Settings → Battery / Energy → Schedule** (
 ```text
 DragonboatAssistant/
 ├── index.js          # Bot + Monday poll + config
+├── poll-title.test.js
 ├── package.json
 ├── .wwebjs_auth/     # Saved WhatsApp session (created after first login; do not commit)
 └── README.md
