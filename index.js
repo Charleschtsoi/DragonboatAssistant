@@ -29,10 +29,41 @@ client.on('ready', async () => {
   console.log('WhatsApp client is ready.');
   await logGroupChats();
   scheduleJobs();
+  if (process.argv.includes('--send-now')) {
+    await sendAttendancePoll(resolveTargetGroupId());
+  }
 });
 
 function chatIdFromMessage(message) {
   return message.id?.remote || (message.fromMe ? message.to : message.from);
+}
+
+function serializedMessageId(message) {
+  const id = message?.id;
+  if (!id) return '(no id)';
+  if (typeof id === 'string') return id;
+  if (id._serialized) return id._serialized;
+  const fromMe = id.fromMe ? 'true' : 'false';
+  const remote = id.remote || '';
+  const serial = id.id || '';
+  if (remote || serial) return `${fromMe}_${remote}_${serial}`;
+  try {
+    return JSON.stringify(id);
+  } catch (_) {
+    return String(id);
+  }
+}
+
+function resolveTargetGroupId() {
+  const flagIndex = process.argv.indexOf('--group');
+  if (flagIndex !== -1 && process.argv[flagIndex + 1]) {
+    return process.argv[flagIndex + 1];
+  }
+  return TARGET_GROUP_ID;
+}
+
+function isPlaceholderGroupId(id) {
+  return !id || id.includes('YOUR_GROUP_ID');
 }
 
 function looksLikeTargetGroup(name) {
@@ -68,9 +99,9 @@ client.on('message_create', async (message) => {
     // Name is optional; chat id is what we need.
   }
   const body = String(message.body || '').replace(/\s+/g, ' ').slice(0, 80);
-  const mark = looksLikeTargetGroup(chatName) ? '  <<< 26/27 AA group' : '';
+  const mark = looksLikeTargetGroup(chatName) || chatId === TARGET_GROUP_ID ? '  <<< 26/27 AA group' : '';
   console.log(
-    `${isGroup ? '[GROUP]' : '[CHAT]'} ${chatName || '(no name)'} | chat id: ${chatId} | message id: ${message.id._serialized} | from me: ${message.fromMe} | ${body}${mark}`
+    `${isGroup ? '[GROUP]' : '[CHAT]'} ${chatName || '(no name)'} | chat id: ${chatId} | message id: ${serializedMessageId(message)} | type: ${message.type} | from me: ${message.fromMe} | ${body}${mark}`
   );
 });
 
@@ -86,17 +117,26 @@ async function alertAdmin(err) {
   }
 }
 
+async function sendAttendancePoll(groupId) {
+  if (isPlaceholderGroupId(groupId)) {
+    throw new Error('Set TARGET_GROUP_ID in index.js or pass --group <id>@g.us');
+  }
+  const pollTitle = buildAttendancePollTitle();
+  const poll = new Poll(pollTitle, POLL_OPTIONS, {
+    allowMultipleAnswers: false, // single-choice (library name for multipleAnswers)
+  });
+  const sent = await client.sendMessage(groupId, poll);
+  console.log(`Monday attendance poll sent: ${pollTitle}`);
+  console.log(`Sent poll | chat id: ${groupId} | message id: ${serializedMessageId(sent)}`);
+  return sent;
+}
+
 function scheduleJobs() {
   cron.schedule(
     POLL_CRON,
     async () => {
       try {
-        const pollTitle = buildAttendancePollTitle();
-        const poll = new Poll(pollTitle, POLL_OPTIONS, {
-          allowMultipleAnswers: false, // single-choice (library name for multipleAnswers)
-        });
-        await client.sendMessage(TARGET_GROUP_ID, poll);
-        console.log(`Monday attendance poll sent: ${pollTitle}`);
+        await sendAttendancePoll(TARGET_GROUP_ID);
       } catch (err) {
         await alertAdmin(err);
       }

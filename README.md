@@ -111,10 +111,16 @@ If you still want to confirm from a live message:
    [GROUP] 26/27 AA Dragon Boat Team | chat id: 1203630xxxxxxxxxx@g.us | message id: ... | from me: true | test  <<< 26/27 AA group
    ```
 3. Copy the **chat id** that ends in **`@g.us`** (that is the group). **message id** is that one WhatsApp message, not the group.
-4. Stop the bot (`Ctrl + C`), paste the chat id into `TARGET_GROUP_ID` in `index.js`, and start again:
+4. Stop the bot (`Ctrl + C`), paste the chat id into `TARGET_GROUP_ID` in `index.js`.
+5. If today’s Monday 09:00 already passed and you still need the poll in the group:
    ```bash
-   npm start
+   node index.js --send-now
    ```
+   Or without editing the file first:
+   ```bash
+   node index.js --send-now --group 1203630xxxxxxxxxx@g.us
+   ```
+   Terminal will log the sent poll’s **message id**. Then start normally with `npm start` so next Monday still runs.
 
 ---
 
