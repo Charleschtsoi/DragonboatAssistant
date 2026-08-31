@@ -243,7 +243,7 @@ You can also set this in **System Settings → Battery / Energy → Schedule** (
 
 ---
 
-## 5. What success / failure looks like
+## 6. What success / failure looks like
 
 | Event | Terminal | WhatsApp |
 | --- | --- | --- |
