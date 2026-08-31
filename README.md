@@ -4,7 +4,7 @@ Local WhatsApp bot for macOS that sends a weekly dragonboat attendance poll.
 
 | Schedule | Action |
 | --- | --- |
-| **Monday 09:00** (Hong Kong) | Sends a poll: *Dragonboat Training Attendance* → Join / Not Join |
+| **Monday 09:00** (Hong Kong) | Sends a poll for **this coming Saturday**: *5 Sep Training 14:00 - 16:00 @ Ap Lei Chau* → Join / Not join |
 
 If the send fails, the bot DMs you (admin) so you can check the MacBook console.
 
@@ -50,17 +50,25 @@ npm install
 
 ---
 
-## 2. Configure `index.js`
+## 2. Configure (Mac only)
 
-Open `index.js` and set the values at the top:
+Copy the example and put the **26/27 AA Dragon Boat Team** chat id in `config.local.js`. That file stays on the Mac and is not committed.
+
+```bash
+cd ~/Developer/DragonboatAssistant
+cp config.local.example.js config.local.js
+```
+
+Edit `config.local.js`:
 
 ```js
-const TARGET_GROUP_ID = 'YOUR_GROUP_ID@g.us';     // WhatsApp group chat ID
-const ADMIN_PHONE_NUMBER = 'YOUR_NUMBER@c.us';   // your number for error alerts
-const TIMEZONE = 'Asia/Hong_Kong';
-
-const POLL_CRON = '0 9 * * 1'; // Monday 09:00 — change if you prefer another time
+module.exports = {
+  TARGET_GROUP_ID: '1203630xxxxxxxxxx@g.us', // group chat id from inspect
+  ADMIN_PHONE_NUMBER: '852XXXXXXXX@c.us',   // optional; error DMs
+};
 ```
+
+The poll title is built automatically from the **upcoming Saturday** in Hong Kong time, for example `12 Sep Training 14:00 - 16:00 @ Ap Lei Chau`. Time and venue live in `poll-title.js` (`TRAINING_TIME`, `TRAINING_VENUE`).
 
 ### Admin phone number format
 
@@ -101,20 +109,61 @@ Session is saved with **LocalAuth** (`.wwebjs_auth/`). You should **not** need t
 
 ### Find `TARGET_GROUP_ID`
 
-1. With the bot running, send any message in the target WhatsApp group (from your phone or another chat).
-2. Watch Terminal — each incoming message logs something like:
+On ready, Terminal lists every WhatsApp group with its `@g.us` id. The dragonboat group is marked `<<< use this`.
+
+If you still want to confirm from a live message:
+
+1. Keep the bot running, then send any message in **26/27 AA Dragon Boat Team** (your own messages are logged too).
+2. Watch Terminal for:
    ```text
-   Incoming message ID / chat: 1203630xxxxxxxxxx@g.us | message id: ...
+   [GROUP] 26/27 AA Dragon Boat Team | chat id: 1203630xxxxxxxxxx@g.us | message id: ... | from me: true | test  <<< 26/27 AA group
    ```
-3. Copy the ID that ends in **`@g.us`**.
-4. Stop the bot (`Ctrl + C`), paste it into `TARGET_GROUP_ID` in `index.js`, and start again:
+3. Copy the **chat id** that ends in **`@g.us`** (that is the group). **message id** is that one WhatsApp message, not the group.
+4. Stop the bot (`Ctrl + C`) and put the chat id in `config.local.js` (see section 2).
+5. To **read** your existing group messages (no new post):
    ```bash
-   npm start
+   node index.js --inspect --group 1203630xxxxxxxxxx@g.us
+   ```
+   Look for `[ME]` and `<<< your message` — that is the text you already sent. Nothing is posted to the group.
+6. To try the real **poll** privately (your own chat, not the group):
+   ```bash
+   node index.js --send-now --to-me
+   ```
+7. Only when you are ready for the group:
+   ```bash
+   node index.js --send-now --group 1203630xxxxxxxxxx@g.us
    ```
 
 ---
 
-## 4. Day-to-day use
+## 4. Next Monday (leave it running)
+
+Do **not** use `--send-now --group`. Today’s 09:00 already passed; the next send is **Monday 7 Sep 09:00 HKT**. The poll title will be **12 Sep Training 14:00 - 16:00 @ Ap Lei Chau**.
+
+```bash
+cd ~/Developer/DragonboatAssistant
+git pull origin cursor/saturday-poll-title-0d60
+caffeinate -i npm start
+```
+
+You want Terminal to show:
+
+```text
+Group chat id is set (...)
+Next Monday poll: 7 Sep 09:00 HKT → 12 Sep Training 14:00 - 16:00 @ Ap Lei Chau
+Nothing is sent now. Leave this process running until next Monday 09:00 HKT.
+```
+
+Keep the Mac plugged in. Optional Monday wake a few minutes early:
+
+```bash
+sudo pmset repeat wakeorpoweron M 08:55:00
+pmset -g sched
+```
+
+---
+
+## 5. Day-to-day use
 
 ```bash
 cd ~/Projects/DragonboatAssistant
@@ -194,11 +243,11 @@ You can also set this in **System Settings → Battery / Energy → Schedule** (
 
 ---
 
-## 5. What success / failure looks like
+## 6. What success / failure looks like
 
 | Event | Terminal | WhatsApp |
 | --- | --- | --- |
-| Monday poll sent | `Monday attendance poll sent.` | Poll in the group |
+| Monday poll sent | `Monday attendance poll sent: 5 Sep Training 14:00 - 16:00 @ Ap Lei Chau` | Poll in the group |
 | Send failed | Error stack in console | DM to admin: *Error: Failed to execute scheduled group task. Check MacBook console.* |
 
 ---
@@ -220,7 +269,11 @@ You can also set this in **System Settings → Battery / Energy → Schedule** (
 
 ```text
 DragonboatAssistant/
-├── index.js          # Bot + Monday poll + config
+├── index.js                 # Bot + Monday poll
+├── poll-title.js            # Saturday date + poll title
+├── poll-title.test.js
+├── config.local.example.js
+├── config.local.js          # Mac-only WhatsApp ids (do not commit)
 ├── package.json
 ├── .wwebjs_auth/     # Saved WhatsApp session (created after first login; do not commit)
 └── README.md
