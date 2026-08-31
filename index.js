@@ -5,13 +5,22 @@ const {
   TIMEZONE,
   POLL_OPTIONS,
   buildAttendancePollTitle,
+  nextScheduledPollTitle,
+  formatShortDate,
 } = require('./poll-title');
 
 // ---------------------------------------------------------------------------
-// Configuration — update these before first run
+// Configuration — put real ids in config.local.js on the Mac (gitignored)
 // ---------------------------------------------------------------------------
-const TARGET_GROUP_ID = 'YOUR_GROUP_ID@g.us'; // e.g. '1203630...@g.us'
-const ADMIN_PHONE_NUMBER = 'YOUR_NUMBER@c.us'; // e.g. '85291234567@c.us'
+let TARGET_GROUP_ID = 'YOUR_GROUP_ID@g.us';
+let ADMIN_PHONE_NUMBER = 'YOUR_NUMBER@c.us';
+try {
+  const local = require('./config.local');
+  if (local.TARGET_GROUP_ID) TARGET_GROUP_ID = local.TARGET_GROUP_ID;
+  if (local.ADMIN_PHONE_NUMBER) ADMIN_PHONE_NUMBER = local.ADMIN_PHONE_NUMBER;
+} catch (_) {
+  // Optional local file; placeholders stay until you create config.local.js
+}
 
 // Monday attendance poll time (Asia/Hong_Kong). Align Mac wake with this window.
 const POLL_CRON = '0 9 * * 1'; // 09:00 every Monday
@@ -27,11 +36,16 @@ client.on('qr', (qr) => {
 
 client.on('ready', async () => {
   console.log('WhatsApp client is ready.');
-  await logGroupChats();
 
   const inspectOnly = process.argv.includes('--inspect');
   const sendNow = process.argv.includes('--send-now');
   const toMe = process.argv.includes('--to-me');
+
+  if (isPlaceholderGroupId(TARGET_GROUP_ID) || inspectOnly) {
+    await logGroupChats();
+  } else {
+    console.log(`Group chat id is set (${TARGET_GROUP_ID}).`);
+  }
 
   if (inspectOnly) {
     console.log('Inspect mode: reading your existing messages. Nothing will be sent to the group.');
@@ -199,7 +213,15 @@ function scheduleJobs() {
   );
 
   console.log(`Attendance poll scheduled (${POLL_CRON}, timezone: ${TIMEZONE}).`);
-  console.log(`Next Saturday poll title: ${buildAttendancePollTitle()}`);
+  const next = nextScheduledPollTitle();
+  console.log(
+    `Next Monday poll: ${formatShortDate(next.monday)} 09:00 HKT → ${next.title}`
+  );
+  if (isPlaceholderGroupId(TARGET_GROUP_ID)) {
+    console.log('TARGET_GROUP_ID is not set yet. Copy config.local.example.js to config.local.js and paste the group chat id.');
+  } else {
+    console.log('Nothing is sent now. Leave this process running until next Monday 09:00 HKT.');
+  }
 }
 
 client.initialize();

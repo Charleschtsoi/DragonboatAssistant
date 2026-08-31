@@ -72,6 +72,48 @@ function buildAttendancePollTitle(from = new Date(), timeZone = TIMEZONE) {
   return formatTrainingPollTitle(upcomingSaturdayDate(from, timeZone));
 }
 
+function clockInTimezone(date, timeZone = TIMEZONE) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return { hour: Number(byType.hour), minute: Number(byType.minute) };
+}
+
+function formatShortDate(ymd) {
+  return `${ymd.day} ${MONTH_SHORT[ymd.month - 1]}`;
+}
+
+// Next Monday 09:00 HKT. If it is already Monday at or after 09:00, skip to next week.
+function nextMondayMorning(from = new Date(), timeZone = TIMEZONE, hour = 9, minute = 0) {
+  const today = calendarDateInTimezone(from, timeZone);
+  const weekdayIndex = WEEKDAY_INDEX[today.weekday];
+  let daysUntilMonday = (1 - weekdayIndex + 7) % 7;
+  if (daysUntilMonday === 0) {
+    const clock = clockInTimezone(from, timeZone);
+    const pastCron = clock.hour > hour || (clock.hour === hour && clock.minute >= minute);
+    if (pastCron) {
+      daysUntilMonday = 7;
+    }
+  }
+  if (daysUntilMonday === 0) {
+    return { year: today.year, month: today.month, day: today.day };
+  }
+  return addCalendarDays(today, daysUntilMonday);
+}
+
+function nextScheduledPollTitle(from = new Date(), timeZone = TIMEZONE) {
+  const monday = nextMondayMorning(from, timeZone, 9, 0);
+  const mondayAtNineUtc = new Date(Date.UTC(monday.year, monday.month - 1, monday.day, 1, 0, 0));
+  return {
+    monday,
+    title: buildAttendancePollTitle(mondayAtNineUtc, timeZone),
+  };
+}
+
 module.exports = {
   TIMEZONE,
   TRAINING_TIME,
@@ -80,4 +122,7 @@ module.exports = {
   upcomingSaturdayDate,
   formatTrainingPollTitle,
   buildAttendancePollTitle,
+  nextMondayMorning,
+  nextScheduledPollTitle,
+  formatShortDate,
 };

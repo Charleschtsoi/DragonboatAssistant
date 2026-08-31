@@ -4,6 +4,8 @@ const {
   upcomingSaturdayDate,
   formatTrainingPollTitle,
   buildAttendancePollTitle,
+  nextMondayMorning,
+  nextScheduledPollTitle,
 } = require('./poll-title.js');
 
 function atHkt(isoLocal) {
@@ -47,6 +49,28 @@ assert.strictEqual(
 assert.strictEqual(
   buildAttendancePollTitle(yearEndMonday, TIMEZONE),
   '2 Jan Training 14:00 - 16:00 @ Ap Lei Chau'
+);
+
+const mondayAfternoon = atHkt('2026-08-31T12:05:00');
+assert.deepStrictEqual(nextMondayMorning(mondayAfternoon, TIMEZONE), {
+  year: 2026,
+  month: 9,
+  day: 7,
+});
+assert.strictEqual(
+  nextScheduledPollTitle(mondayAfternoon, TIMEZONE).title,
+  '12 Sep Training 14:00 - 16:00 @ Ap Lei Chau'
+);
+
+const mondayBeforeCron = atHkt('2026-09-07T08:59:00');
+assert.deepStrictEqual(nextMondayMorning(mondayBeforeCron, TIMEZONE), {
+  year: 2026,
+  month: 9,
+  day: 7,
+});
+assert.strictEqual(
+  nextScheduledPollTitle(mondayBeforeCron, TIMEZONE).title,
+  '12 Sep Training 14:00 - 16:00 @ Ap Lei Chau'
 );
 
 console.log('poll-title tests passed');

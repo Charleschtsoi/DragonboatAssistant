@@ -50,17 +50,25 @@ npm install
 
 ---
 
-## 2. Configure `index.js`
+## 2. Configure (Mac only)
 
-Open `index.js` and set the values at the top:
+Copy the example and put the **26/27 AA Dragon Boat Team** chat id in `config.local.js`. That file stays on the Mac and is not committed.
 
-```js
-const TARGET_GROUP_ID = 'YOUR_GROUP_ID@g.us';     // WhatsApp group chat ID
-const ADMIN_PHONE_NUMBER = 'YOUR_NUMBER@c.us';   // your number for error alerts
-const POLL_CRON = '0 9 * * 1'; // Monday 09:00 — change if you prefer another time
+```bash
+cd ~/Developer/DragonboatAssistant
+cp config.local.example.js config.local.js
 ```
 
-The poll title is built automatically from the **upcoming Saturday** in Hong Kong time, for example `22 Aug Training 14:00 - 16:00 @ Ap Lei Chau`. Time and venue live in `poll-title.js` (`TRAINING_TIME`, `TRAINING_VENUE`).
+Edit `config.local.js`:
+
+```js
+module.exports = {
+  TARGET_GROUP_ID: '1203630xxxxxxxxxx@g.us', // group chat id from inspect
+  ADMIN_PHONE_NUMBER: '852XXXXXXXX@c.us',   // optional; error DMs
+};
+```
+
+The poll title is built automatically from the **upcoming Saturday** in Hong Kong time, for example `12 Sep Training 14:00 - 16:00 @ Ap Lei Chau`. Time and venue live in `poll-title.js` (`TRAINING_TIME`, `TRAINING_VENUE`).
 
 ### Admin phone number format
 
@@ -111,7 +119,7 @@ If you still want to confirm from a live message:
    [GROUP] 26/27 AA Dragon Boat Team | chat id: 1203630xxxxxxxxxx@g.us | message id: ... | from me: true | test  <<< 26/27 AA group
    ```
 3. Copy the **chat id** that ends in **`@g.us`** (that is the group). **message id** is that one WhatsApp message, not the group.
-4. Stop the bot (`Ctrl + C`), paste the chat id into `TARGET_GROUP_ID` in `index.js`.
+4. Stop the bot (`Ctrl + C`) and put the chat id in `config.local.js` (see section 2).
 5. To **read** your existing group messages (no new post):
    ```bash
    node index.js --inspect --group 1203630xxxxxxxxxx@g.us
@@ -128,7 +136,34 @@ If you still want to confirm from a live message:
 
 ---
 
-## 4. Day-to-day use
+## 4. Next Monday (leave it running)
+
+Do **not** use `--send-now --group`. Today’s 09:00 already passed; the next send is **Monday 7 Sep 09:00 HKT**. The poll title will be **12 Sep Training 14:00 - 16:00 @ Ap Lei Chau**.
+
+```bash
+cd ~/Developer/DragonboatAssistant
+git pull origin cursor/saturday-poll-title-0d60
+caffeinate -i npm start
+```
+
+You want Terminal to show:
+
+```text
+Group chat id is set (...)
+Next Monday poll: 7 Sep 09:00 HKT → 12 Sep Training 14:00 - 16:00 @ Ap Lei Chau
+Nothing is sent now. Leave this process running until next Monday 09:00 HKT.
+```
+
+Keep the Mac plugged in. Optional Monday wake a few minutes early:
+
+```bash
+sudo pmset repeat wakeorpoweron M 08:55:00
+pmset -g sched
+```
+
+---
+
+## 5. Day-to-day use
 
 ```bash
 cd ~/Projects/DragonboatAssistant
@@ -234,9 +269,11 @@ You can also set this in **System Settings → Battery / Energy → Schedule** (
 
 ```text
 DragonboatAssistant/
-├── index.js          # Bot + Monday poll + config
-├── poll-title.js     # Saturday date + poll title
+├── index.js                 # Bot + Monday poll
+├── poll-title.js            # Saturday date + poll title
 ├── poll-title.test.js
+├── config.local.example.js
+├── config.local.js          # Mac-only WhatsApp ids (do not commit)
 ├── package.json
 ├── .wwebjs_auth/     # Saved WhatsApp session (created after first login; do not commit)
 └── README.md
