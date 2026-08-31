@@ -101,13 +101,17 @@ Session is saved with **LocalAuth** (`.wwebjs_auth/`). You should **not** need t
 
 ### Find `TARGET_GROUP_ID`
 
-1. With the bot running, send any message in the target WhatsApp group (from your phone or another chat).
-2. Watch Terminal — each incoming message logs something like:
+On ready, Terminal lists every WhatsApp group with its `@g.us` id. The dragonboat group is marked `<<< use this`.
+
+If you still want to confirm from a live message:
+
+1. Keep the bot running, then send any message in **26/27 AA Dragon Boat Team** (your own messages are logged too).
+2. Watch Terminal for:
    ```text
-   Incoming message ID / chat: 1203630xxxxxxxxxx@g.us | message id: ...
+   [GROUP] 26/27 AA Dragon Boat Team | chat id: 1203630xxxxxxxxxx@g.us | message id: ... | from me: true | test  <<< 26/27 AA group
    ```
-3. Copy the ID that ends in **`@g.us`**.
-4. Stop the bot (`Ctrl + C`), paste it into `TARGET_GROUP_ID` in `index.js`, and start again:
+3. Copy the **chat id** that ends in **`@g.us`** (that is the group). **message id** is that one WhatsApp message, not the group.
+4. Stop the bot (`Ctrl + C`), paste the chat id into `TARGET_GROUP_ID` in `index.js`, and start again:
    ```bash
    npm start
    ```

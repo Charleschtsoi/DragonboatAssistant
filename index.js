@@ -25,15 +25,53 @@ client.on('qr', (qr) => {
   qrcode.generate(qr, { small: true });
 });
 
-client.on('ready', () => {
+client.on('ready', async () => {
   console.log('WhatsApp client is ready.');
+  await logGroupChats();
   scheduleJobs();
 });
 
-// Log every incoming message ID so you can find the exact TARGET_GROUP_ID
-// (group chats end in @g.us) during initial setup.
-client.on('message', (message) => {
-  console.log('Incoming message ID / chat:', message.from, '| message id:', message.id._serialized);
+function chatIdFromMessage(message) {
+  return message.id?.remote || (message.fromMe ? message.to : message.from);
+}
+
+function looksLikeTargetGroup(name) {
+  return /dragon/i.test(name) || /26\/27\s*AA/i.test(name);
+}
+
+async function logGroupChats() {
+  try {
+    const chats = await client.getChats();
+    const groups = chats.filter((chat) => chat.isGroup);
+    console.log('======== WhatsApp groups (copy @g.us into TARGET_GROUP_ID) ========');
+    for (const group of groups) {
+      const id = group.id._serialized;
+      const mark = looksLikeTargetGroup(group.name || '') ? '  <<< use this' : '';
+      console.log(`${group.name} | ${id}${mark}`);
+    }
+    console.log('================================================================');
+  } catch (err) {
+    console.error('Failed to list WhatsApp groups:', err);
+  }
+}
+
+// Log every new message, including ones you send from this phone.
+// Own messages do not fire the `message` event, so we use `message_create`.
+client.on('message_create', async (message) => {
+  const chatId = chatIdFromMessage(message);
+  const isGroup = typeof chatId === 'string' && chatId.endsWith('@g.us');
+  let chatName = '';
+  try {
+    const chat = await message.getChat();
+    chatName = chat.name || '';
+  } catch (_) {
+    // Name is optional; chat id is what we need.
+  }
+  const body = String(message.body || '').replace(/\s+/g, ' ').slice(0, 80);
+  const mark = looksLikeTargetGroup(chatName) ? '  <<< 26/27 AA group' : '';
+  console.log(
+    `${isGroup ? '[GROUP]' : '[CHAT]'} ${chatName || '(no name)'} | chat id: ${chatId} | message id: ${message.id._serialized} | from me: ${message.fromMe} | ${body}${mark}`
+  );
 });
 
 async function alertAdmin(err) {
