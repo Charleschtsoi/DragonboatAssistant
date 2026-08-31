@@ -28,9 +28,35 @@ client.on('qr', (qr) => {
 client.on('ready', async () => {
   console.log('WhatsApp client is ready.');
   await logGroupChats();
+
+  const inspectOnly = process.argv.includes('--inspect');
+  const sendNow = process.argv.includes('--send-now');
+  const toMe = process.argv.includes('--to-me');
+
+  if (inspectOnly) {
+    console.log('Inspect mode: reading your existing messages. Nothing will be sent to the group.');
+    try {
+      await inspectGroupMessages(resolveTargetGroupId());
+    } catch (err) {
+      console.error(err);
+    }
+    return;
+  }
+
   scheduleJobs();
-  if (process.argv.includes('--send-now')) {
-    await sendAttendancePoll(resolveTargetGroupId());
+
+  if (sendNow) {
+    try {
+      const destination = toMe ? selfChatId() : resolveTargetGroupId();
+      if (toMe) {
+        console.log(`Sending a test poll to YOU only (${destination}). The group will not get this.`);
+      } else {
+        console.log(`Sending the attendance poll to the group (${destination}).`);
+      }
+      await sendAttendancePoll(destination);
+    } catch (err) {
+      await alertAdmin(err);
+    }
   }
 });
 
@@ -64,6 +90,14 @@ function resolveTargetGroupId() {
 
 function isPlaceholderGroupId(id) {
   return !id || id.includes('YOUR_GROUP_ID');
+}
+
+function selfChatId() {
+  const wid = client.info?.wid;
+  if (!wid) {
+    throw new Error('WhatsApp self id is not ready yet.');
+  }
+  return wid._serialized || `${wid.user}@c.us`;
 }
 
 function looksLikeTargetGroup(name) {
@@ -117,17 +151,37 @@ async function alertAdmin(err) {
   }
 }
 
-async function sendAttendancePoll(groupId) {
+async function inspectGroupMessages(groupId, limit = 30) {
   if (isPlaceholderGroupId(groupId)) {
+    throw new Error('Pass --group <id>@g.us so inspect can read that chat without sending.');
+  }
+  const chat = await client.getChatById(groupId);
+  console.log(`======== Inspect ${chat.name || '(no name)'} | ${groupId} ========`);
+  const messages = await chat.fetchMessages({ limit });
+  let ownCount = 0;
+  for (const message of messages) {
+    const body = String(message.body || '').replace(/\s+/g, ' ').slice(0, 100);
+    const own = message.fromMe ? '  <<< your message' : '';
+    if (message.fromMe) ownCount += 1;
+    console.log(
+      `[${message.fromMe ? 'ME' : 'IN'}] type: ${message.type} | message id: ${serializedMessageId(message)} | ${body}${own}`
+    );
+  }
+  console.log(`Read ${messages.length} messages (${ownCount} from you). Nothing was sent.`);
+  console.log('================================================================');
+}
+
+async function sendAttendancePoll(chatId) {
+  if (isPlaceholderGroupId(chatId)) {
     throw new Error('Set TARGET_GROUP_ID in index.js or pass --group <id>@g.us');
   }
   const pollTitle = buildAttendancePollTitle();
   const poll = new Poll(pollTitle, POLL_OPTIONS, {
     allowMultipleAnswers: false, // single-choice (library name for multipleAnswers)
   });
-  const sent = await client.sendMessage(groupId, poll);
+  const sent = await client.sendMessage(chatId, poll);
   console.log(`Monday attendance poll sent: ${pollTitle}`);
-  console.log(`Sent poll | chat id: ${groupId} | message id: ${serializedMessageId(sent)}`);
+  console.log(`Sent poll | chat id: ${chatId} | message id: ${serializedMessageId(sent)}`);
   return sent;
 }
 
